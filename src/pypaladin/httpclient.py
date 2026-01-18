@@ -7,6 +7,10 @@ from loguru import logger
 from pypaladin import conf
 
 
+TYPE_WWW_FORM = "application/x-www-form-urlencoded"
+TYPE_JSON = "application/json"
+TYPE_TEXT_HTML = "text/html"
+
 _DEFAULT_CONF: Optional[conf.HTTPClientConfig] = None
 
 _text_regex = re.compile(r".*(application/json|text/html).*")
