@@ -1,16 +1,20 @@
 import functools
+import pathlib
 import re
 import subprocess
 import sys
 from typing import Optional
+from urllib import parse
 
 import httpx
 
 import click
 from loguru import logger
+from termcolor import colored, cprint
 
 from pypaladin.command.diskpart import compress_virtual_disk
 from pypaladin.conf import BaseAppConfig
+from pypaladin.httpclient import default_client
 from pypaladin.utils import strutil
 from pypaladin_map import ipinfo, location, qqmap, weather
 from pypaladin_tool import types
@@ -32,6 +36,67 @@ def click_command_with_help(func):
         func(*args, **kwargs)
 
     return _wrapper
+
+
+@cli.command()
+@click.option("-T", "--timeout", type=int, help="Timeout")
+@click.option("-X", "--method", help="request method, default: GET", default="GET")
+@click.option("-d", "--data", help="request body")
+@click.option(
+    "-H",
+    "--header",
+    multiple=True,
+    type=types.TYPE_HEADER,
+    help="HTTP headers e.g. 'content-type=application/json",
+)
+@click.argument("url")
+def curl(
+    url: str,
+    method: str = "GET",
+    header: Optional[dict] = None,
+    timeout: Optional[int] = None,
+    data: Optional[str] = None,
+):
+    """curl command
+
+    \b
+    Argument:
+        URl: 请求URL
+    Example:
+        curl http://www.example.com
+    """
+    if not url.startswith("http://") and not url.startswith("https://"):
+        raise click.UsageError(
+            f'url "{url}" is invalid (do you mean http(s)://{url} ?)'
+        )
+    if timeout is not None and timeout <= 0:
+        raise click.UsageError(f'timeout "{timeout}" must > 0)')
+
+    resp = httpx.request(
+        method=method,
+        url=url,
+        headers=functools.reduce(lambda x, y: x | y, header or [], {}),
+        timeout=timeout or None,
+    )
+
+    click.echo(f"{resp.request.method} {resp.request.url}")
+    for k, v in resp.request.headers.items():
+        click.echo(f"{k.title()}: {v}")
+    click.echo("")
+    if data:
+        click.echo(data)
+
+    cprint("========== response ==========", "cyan")
+    cprint(
+        f"{resp.status_code} {resp.reason_phrase}",
+        "red" if resp.status_code >= 400 else "green",
+    )
+    for k, v in resp.headers.items():
+        click.echo(f"{k.title()}: {v}")
+
+    click.echo("")
+    click.echo(resp.content.decode() if resp.content else "")
+    cprint(f"(Elapsed: {resp.elapsed.total_seconds()}s)", "grey")
 
 
 @cli.group()
