@@ -1,4 +1,6 @@
+import functools
 import re
+import subprocess
 import sys
 from typing import Optional
 
@@ -7,6 +9,7 @@ import httpx
 import click
 from loguru import logger
 
+from pypaladin.command.diskpart import compress_virtual_disk
 from pypaladin.conf import BaseAppConfig
 from pypaladin.utils import strutil
 from pypaladin_map import ipinfo, location, qqmap, weather
@@ -14,14 +17,27 @@ from pypaladin_tool import types
 
 
 @click.group()
+@click.help_option("-h", "--help")
 def cli():
     """paladin tools"""
     BaseAppConfig.setup()
 
+
+def click_command_with_help(func):
+
+    @cli.command()
+    @click.help_option("-h", "--help")
+    @functools.wraps(func)
+    def _wrapper(*args, **kwargs):
+        func(*args, **kwargs)
+
+    return _wrapper
+
+
 @cli.group()
 def map():
-    """MAP tools
-    """
+    """MAP tools"""
+
 
 @map.command()
 @click.option("--detail", is_flag=True, help="显示详情")
@@ -85,6 +101,22 @@ def query_weather(city: Optional[str] = None):
     my_location = locations[0]
     data = api.get_weather(my_location)
     print(data.format())
+
+
+@cli.group()
+def disk():
+    """Disk tools"""
+
+
+@disk.command()
+@click.help_option("-h", "--help")
+@click.argument("vhd_path")
+def compress_vhd(vhd_path):
+    """Compress vhd/vhdx disk"""
+    try:
+        compress_virtual_disk(vhd_path)
+    except subprocess.CalledProcessError as e:
+        logger.error("run diskpart failed: {}", e)
 
 
 if __name__ == "__main__":
