@@ -3,7 +3,7 @@ from pydantic import BaseModel, PrivateAttr
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import sessionmaker, Session
 
-from pypaladin_orm.orm import Base, BaseDBModel
+from pypaladin_orm.dbmodel import Base, BaseDBModel
 
 
 class DBConfig(BaseModel):
@@ -14,7 +14,7 @@ class DBConfig(BaseModel):
     password: str = ""
 
 
-_DEFAILT: DBConfig = DBConfig()
+_DEFAULT_CONF: DBConfig = DBConfig()
 
 _ENGINE: Optional[Engine] = None
 _SESSION: Optional[sessionmaker] = None
@@ -23,7 +23,7 @@ _SESSION: Optional[sessionmaker] = None
 def _engine():
     global _ENGINE
     if not _ENGINE:
-        _ENGINE = create_engine(_DEFAILT.connection)
+        _ENGINE = create_engine(_DEFAULT_CONF.connection)
     return _ENGINE
 
 
