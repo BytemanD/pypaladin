@@ -26,4 +26,3 @@ def get_var(key: str) -> Any:
 
 def set_trace(value: str):
     set_vars(trace=value)
-

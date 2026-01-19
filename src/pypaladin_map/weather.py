@@ -57,7 +57,6 @@ class Weather:
 
 
 class XDApi:
-
     def __init__(self):
         self.client = default_client(base_url="http://u.api.xdapi.com")
 
@@ -65,7 +64,9 @@ class XDApi:
         resp = self.get("/api/v2/Weather/city", params={"code": location.area_code})
         data = resp.json()
         if data.get("code") != 1 or not data.get("data"):
-            raise ValueError(f'get weather failed, {data.get("msg")}, ' f'data: {data.get("data")}')
+            raise ValueError(
+                f"get weather failed, {data.get('msg')}, data: {data.get('data')}"
+            )
         value = data.get("data")[0]
         return Weather(
             location=location,
@@ -88,9 +89,8 @@ MC4CAQAwBQYDK2VwBCIEIG+OSUl393SKw7d5kVdWKKp4ViL1EGMs7UCqFAWCs9CU
 
 
 class HefengWeatherApi:
-
     def __init__(self, project_id: Optional[str]=None, private_key: Optional[str]=None,
-                 kid: Optional[str]=None):                                              # fmt: skip
+                 kid: Optional[str]=None):  # fmt: skip
         self.project_id = project_id or DEFAULT_HEFENG_PROJECT_ID
         self.private_key = private_key or DEFAULT_HEFENG_PRIVATE_KEY
         self.kid = kid or DEFAULT_HEFENG_KID
@@ -106,11 +106,15 @@ class HefengWeatherApi:
         headers = {"kid": self.kid}
 
         # Generate JWT
-        encoded_jwt = jwt.encode(payload, self.private_key, algorithm="EdDSA", headers=headers)
+        encoded_jwt = jwt.encode(
+            payload, self.private_key, algorithm="EdDSA", headers=headers
+        )
         return encoded_jwt
 
     @lru_cache
-    def lookup_city(self, location: str, adm: Optional[str] = None) -> List[net_location.Location]:
+    def lookup_city(
+        self, location: str, adm: Optional[str] = None
+    ) -> List[net_location.Location]:
         params = {"location": location}
         if adm:
             params["adm"] = adm
@@ -134,7 +138,7 @@ class HefengWeatherApi:
 
     def get_weather(self, location: net_location.Location) -> Weather:
         resp = self.client.get("/v7/weather/now", params={"location": location.area_code},
-                        headers={"Authorization": f"Bearer {self._get_token()}"})   # fmt: skip
+                        headers={"Authorization": f"Bearer {self._get_token()}"})  # fmt: skip
         data = resp.json()
         value = data.get("now")
         return Weather(

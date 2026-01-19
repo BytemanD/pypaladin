@@ -56,7 +56,9 @@ class QQMapAPI:
             area_code=result.get("ad_info", {}).get("adcode", ""),
         )
 
-    def get_weather(self, city: location.Location, query_type: str = "now") -> weather.Weather:
+    def get_weather(
+        self, city: location.Location, query_type: str = "now"
+    ) -> weather.Weather:
         req_url = "/ws/weather/v1"
         adcode = city.area_code
         params = {"adcode": adcode, "type": query_type}

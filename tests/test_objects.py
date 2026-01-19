@@ -1,10 +1,9 @@
-from typing import (
-    Optional,
-)
+from typing import Optional
 from sqlalchemy import Column, String
 
-from pypaladin.objects import BaseObject, engine
-from pypaladin.orm import Base, BaseDBModel
+from pypaladin_orm.objects import BaseObject, create_all
+from pypaladin_orm.orm import BaseDBModel
+from tests.test_httpclient import CONF
 
 
 class UserDB(BaseDBModel):
@@ -18,8 +17,10 @@ class User(BaseObject):
 
     name: Optional[str] = ""
 
+
 def main():
-    Base.metadata.create_all(engine)
+    CONF.setup()
+    create_all()
 
     User.delete()
 
@@ -36,6 +37,7 @@ def main():
     print(user1)
     users = User.query_all()
     print(users)
+
 
 if __name__ == "__main__":
     main()

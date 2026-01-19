@@ -27,14 +27,16 @@ class DataTable(prettytable.PrettyTable):
         """Add items to table"""
         for i, item in enumerate(items, start=1):
             self.add_row(
-                (self.index and [i] or []) + [item.get(field) for field in self.data_fields]
+                (self.index and [i] or [])
+                + [item.get(field) for field in self.data_fields]
             )
 
     def add_object_items(self, items: List[object]):
         """Add items to table"""
         for i, item in enumerate(items, start=1):
             self.add_row(
-                (self.index and [i] or []) + [getattr(item, field) for field in self.data_fields]
+                (self.index and [i] or [])
+                + [getattr(item, field) for field in self.data_fields]
             )
 
     def set_align(self, kwargs):

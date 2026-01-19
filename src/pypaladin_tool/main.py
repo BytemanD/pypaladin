@@ -1,20 +1,17 @@
 import functools
-import pathlib
 import re
 import subprocess
 import sys
 from typing import Optional
-from urllib import parse
 
 import httpx
 
 import click
 from loguru import logger
-from termcolor import colored, cprint
+from termcolor import cprint
 
 from pypaladin.command.diskpart import compress_virtual_disk
 from pypaladin.conf import BaseAppConfig
-from pypaladin.httpclient import default_client
 from pypaladin.utils import strutil
 from pypaladin_map import ipinfo, location, qqmap, weather
 from pypaladin_tool import types
@@ -28,7 +25,6 @@ def cli():
 
 
 def click_command_with_help(func):
-
     @cli.command()
     @click.help_option("-h", "--help")
     @functools.wraps(func)
@@ -124,7 +120,7 @@ def info(detail=False, ip=None):
             ip_location = api.get_location(local_info.get("ip"))
             break
         if not detail:
-            click.echo(f'public ip: {local_info.get("ip")}')
+            click.echo(f"public ip: {local_info.get('ip')}")
             click.echo(f"location : {ip_location.info()}")
         else:
             local_info.update(**ip_location.to_dict())

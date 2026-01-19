@@ -40,18 +40,18 @@ class Location:
 
 
 class UUToolApi:
-
     def __init__(self):
         self.client = default_client("https://api.uutool.cn")
 
     def get_location(self, ipaddr) -> Location:
-        resp = self.client.get(f"/ip/location/?ip={ipaddr}", headers={"accept-language": "zh-CN"})
+        resp = self.client.get(
+            f"/ip/location/?ip={ipaddr}", headers={"accept-language": "zh-CN"}
+        )
         data = resp.json()
         return Location(**data.get("data"))
 
 
 class IP77Api:
-
     def __init__(self):
         self.client = default_client("https://api.ip77.net")
 
@@ -63,7 +63,7 @@ class IP77Api:
         )
         body = resp.json()
         if body.get("error"):
-            raise IOError(f'request failed {body.get("error")}')
+            raise IOError(f"request failed {body.get('error')}")
         data = body.get("data", {})
         for k in ["risk"]:
             if k not in data:

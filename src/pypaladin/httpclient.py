@@ -3,15 +3,13 @@ from typing import Dict, List, Optional
 
 import httpx
 from loguru import logger
-
-from pypaladin import conf
+from pydantic import BaseModel
 
 
 TYPE_WWW_FORM = "application/x-www-form-urlencoded"
 TYPE_JSON = "application/json"
 TYPE_TEXT_HTML = "text/html"
 
-_DEFAULT_CONF: Optional[conf.HTTPClientConfig] = None
 
 _text_regex = re.compile(r".*(application/json|text/html).*")
 _resp_detail = """
@@ -25,6 +23,14 @@ _resp_detail = """
 {content}
 """
 
+
+class HTTPClientConfig(BaseModel):
+    log_response_detail: bool = True
+    timeout: int = 60
+    retries: int = 0
+
+
+_DEFAULT_CONF: HTTPClientConfig = HTTPClientConfig()
 
 
 def format_headers(headers: httpx.Headers):
@@ -91,12 +97,12 @@ def default_client(
         "request": [_log_request],
         "response": [_log_response],
     }
-    if conf._BASE_CONF.log.level.upper() == "TRACE":
+    if _DEFAULT_CONF.log_response_detail:
         event_hooks["response"].append(_log_response_detail)
     if raise_for_status:
         event_hooks["response"].append(_raise_for_status)
-    timeout = timeout or conf._BASE_CONF.httpclient.timeout
-    retries = retries or conf._BASE_CONF.httpclient.retries
+    timeout = timeout or _DEFAULT_CONF.timeout
+    retries = retries or _DEFAULT_CONF.retries
     kwargs = {}
     if timeout:
         kwargs["timeout"] = timeout

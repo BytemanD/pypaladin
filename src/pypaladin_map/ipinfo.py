@@ -2,7 +2,6 @@ from pypaladin.httpclient import default_client
 
 
 class IPinfoAPI:
-
     def __init__(self):
         self.client = default_client(base_url="https://ipinfo.io")
 
@@ -12,7 +11,6 @@ class IPinfoAPI:
 
 
 class IPAPI:
-
     def __init__(self):
         self.client = default_client(base_url="http://ip-api.com")
 
