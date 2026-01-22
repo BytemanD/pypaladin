@@ -35,3 +35,10 @@ dev = [
 [[tool.uv.index]]
 name = "tsinghua"
 url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+
+[tool.pytest]
+minversion = "9.0"
+addopts = ["-ra"]
+testpaths = [
+    "tests",
+]

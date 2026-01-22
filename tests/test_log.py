@@ -1,14 +1,10 @@
 from loguru import logger
-
-from pypaladin import conf, context
 from concurrent import futures
 
-CONF = conf.BaseAppConfig()
+from pypaladin import context
+import fixture
 
-
-def main():
-    CONF.setup()
-
+def test_logger():
     def do_something(x):
         context.set_trace(f"trace-{x}")
         for i in range(5):
@@ -22,6 +18,3 @@ def main():
             pass
     logger.info("done")
 
-
-if __name__ == "__main__":
-    main()

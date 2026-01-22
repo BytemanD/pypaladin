@@ -1,14 +1,7 @@
-from pypaladin import conf, httpclient
+from pypaladin import httpclient
 
-CONF = conf.BaseAppConfig()
+import fixture
 
-
-def main():
-    CONF.setup()
-
-    client = httpclient.default_client(timeout=10)
+def test_httpclient():
+    client = httpclient.default_client(timeout=10, raise_for_status=True)
     client.get("https://www.baidu.com/")
-
-
-if __name__ == "__main__":
-    main()
