@@ -1,28 +1,13 @@
 import dataclasses
-import datetime
 import time
 from functools import lru_cache
 from typing import List, Optional
 
 import jwt
-from termcolor import colored
 
 from pypaladin.httpclient import default_client
 
 from pypaladin_map import location as net_location
-
-WEATHER_TEMPLATE = """
-🕧 {date}     🌎 {area}
-
-  天气: {weather}   🌡️ {temperature}
-  风向: {winddirection}
-  风力: {windpower}
-  风速: {windspeed}
-  湿度: {humidity}
-
-  {reporttime}
-  {link}
-"""
 
 
 @dataclasses.dataclass
@@ -40,20 +25,6 @@ class Weather:
     # 相对湿度，百分比数值
     humidity: Optional[int | float] = None
     link: Optional[str] = None
-
-    def format(self) -> str:
-        return WEATHER_TEMPLATE.format(
-            date=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            area=colored(self.location.info(), "red"),
-            weather=colored(self.weather, "cyan"),
-            temperature=colored(f"{self.temperature}℃", "cyan"),
-            winddirection=colored(self.winddirection, "blue"),
-            windpower=colored(self.windpower or "-", "blue"),
-            windspeed=colored(self.windspeed or "-", "blue"),
-            humidity=colored(self.humidity or "-", "yellow"),
-            reporttime=colored(f"更新时间: {self.reporttime}", "dark_grey"),
-            link=colored(f"更多信息: {self.link or '-'}", "dark_grey"),
-        )
 
 
 class XDApi:

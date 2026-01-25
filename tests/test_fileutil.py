@@ -13,7 +13,7 @@ def test_move_single_file():
         temp_path = Path(temp_dir)
         dst_dir = temp_path.joinpath("destination")
         # 创建源文件
-        file1_path = create_text(temp_path, Path('source', file1))
+        file1_path = create_text(temp_path, Path("source", file1))
         # 移动文件
         move_files(file1_path.parent, dst_dir)
 
@@ -92,14 +92,15 @@ def test_move_directory_files_recursive():
         assert dst_dir.joinpath(file2.name).exists()
         assert dst_dir.joinpath(subfile.name).exists()
 
+
 def test_move_files_with_file_exists_error():
     file1 = "file1.txt"
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
         dst_dir = temp_path.joinpath("destination")
         # 创建源文件
-        file1_path = create_text(temp_dir, file1, content='foo')
-        dst_file1_path = create_text(temp_dir, dst_dir.joinpath(file1), content='bar')
+        file1_path = create_text(temp_dir, file1, content="foo")
+        dst_file1_path = create_text(temp_dir, dst_dir.joinpath(file1), content="bar")
 
         # 移动文件
         with pytest.raises(FileExistsError, match="目标文件已存在"):
@@ -108,7 +109,7 @@ def test_move_files_with_file_exists_error():
         # 验证文件已移动
         assert file1_path.exists()
         assert dst_file1_path.exists()
-        assert dst_file1_path.read_text() == 'bar'
+        assert dst_file1_path.read_text() == "bar"
 
 
 def test_move_files_with_ignore():
@@ -117,8 +118,8 @@ def test_move_files_with_ignore():
         temp_path = Path(temp_dir)
         dst_dir = temp_path.joinpath("destination")
         # 创建源文件
-        file1_path = create_text(temp_dir, file1, content='foo')
-        dst_file1_path = create_text(temp_dir, dst_dir.joinpath(file1), content='bar')
+        file1_path = create_text(temp_dir, file1, content="foo")
+        dst_file1_path = create_text(temp_dir, dst_dir.joinpath(file1), content="bar")
 
         # 移动文件
         move_files(file1_path.parent, dst_dir, if_exists="ignore")
@@ -126,7 +127,7 @@ def test_move_files_with_ignore():
         # 验证文件已移动
         assert file1_path.exists()
         assert dst_file1_path.exists()
-        assert dst_file1_path.read_text() == 'bar'
+        assert dst_file1_path.read_text() == "bar"
 
 
 def test_move_files_with_overwrite():
@@ -135,8 +136,8 @@ def test_move_files_with_overwrite():
         temp_path = Path(temp_dir)
         dst_dir = temp_path.joinpath("destination")
         # 创建源文件
-        file1_path = create_text(temp_dir, Path('source', file1), 'foo')
-        dst_file1_path = create_text(temp_dir, dst_dir.joinpath(file1), 'bar')
+        file1_path = create_text(temp_dir, Path("source", file1), "foo")
+        dst_file1_path = create_text(temp_dir, dst_dir.joinpath(file1), "bar")
 
         # 移动文件
         move_files(file1_path.parent, dst_dir, if_exists="overwrite")
@@ -144,4 +145,4 @@ def test_move_files_with_overwrite():
         # 验证文件已移动
         assert not file1_path.exists()
         assert dst_file1_path.exists()
-        assert dst_file1_path.read_text() == 'foo'
+        assert dst_file1_path.read_text() == "foo"

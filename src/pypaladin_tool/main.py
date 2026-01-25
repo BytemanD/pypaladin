@@ -1,27 +1,46 @@
+from datetime import datetime
 import functools
+from pathlib import Path
 import re
 import subprocess
 import sys
-from typing import Optional
+from typing import List, Optional
 
 import httpx
 
 import click
 from loguru import logger
-from termcolor import cprint
 
+from pypaladin import log
 from pypaladin.command.diskpart import compress_virtual_disk
 from pypaladin.conf import BaseAppConfig
+from pypaladin.httpclient import default_client
 from pypaladin.utils import strutil
+from pypaladin.utils.fileutil import move_files
 from pypaladin_map import ipinfo, location, qqmap, weather
-from pypaladin_tool import types
+from pypaladin_tool import _types
+from pypaladin_tool._constants import WEATHER_TEMPLATE
+
+CONF = BaseAppConfig()
+
+
+def _error_msg(message: str):
+    return click.style(message, fg="red")
 
 
 @click.group()
 @click.help_option("-h", "--help")
-def cli():
+@click.option("-v", "--verbose", count=True, help="Verbose mode")
+def cli(verbose: int):
     """paladin tools"""
-    BaseAppConfig.setup()
+    CONF.setup()
+    if verbose:
+        if not CONF.log.file:
+            CONF.log.level = ["INFO", "DEBUG", "TRACE"][min(verbose, 3) - 1]
+            logger.remove()
+            CONF.setup()
+        else:
+            log.add_conole_handler(["INFO", "DEBUG", "TRACE"][min(verbose, 3) - 1])
 
 
 def click_command_with_help(func):
@@ -35,17 +54,23 @@ def click_command_with_help(func):
 
 
 @cli.command()
-@click.option("-T", "--timeout", type=int, help="Timeout")
-@click.option("-X", "--method", help="request method, default: GET", default="GET")
-@click.option("-d", "--data", help="request body")
+@click.option("-T", "--timeout", type=click.IntRange(min=1), help="Timeout")
+@click.option(
+    "-X",
+    "--method",
+    type=click.Choice(["GET", "POST", "PUT", "DELETE", "OPTIONS"]),
+    default="GET",
+    help="request method, default: GET",
+)
+@click.option("-D", "--data", help="request body")
 @click.option(
     "-H",
     "--header",
     multiple=True,
-    type=types.TYPE_HEADER,
-    help="HTTP headers e.g. 'content-type=application/json",
+    type=_types.TYPE_HEADER,
+    help="HTTP headers. e.g. 'content-type=application/json",
 )
-@click.argument("url")
+@click.argument("url", type=click.STRING)
 def curl(
     url: str,
     method: str = "GET",
@@ -63,18 +88,20 @@ def curl(
     """
     if not url.startswith("http://") and not url.startswith("https://"):
         raise click.UsageError(
-            f'url "{url}" is invalid (do you mean http(s)://{url} ?)'
+            _error_msg(f'url "{url}" is invalid, do you mean http(s)://{url} ?')
         )
     if timeout is not None and timeout <= 0:
-        raise click.UsageError(f'timeout "{timeout}" must > 0)')
+        raise click.UsageError(_error_msg(f'timeout "{timeout}" must > 0)'))
 
-    resp = httpx.request(
-        method=method,
-        url=url,
-        headers=functools.reduce(lambda x, y: x | y, header or [], {}),
-        timeout=timeout or None,
-    )
-
+    try:
+        client = default_client(timeout=timeout)
+        resp = client.request(
+            method=method,
+            url=url,
+            headers=functools.reduce(lambda x, y: x | y, header or [], {}),
+        )
+    except httpx.HTTPError:
+        raise click.ClickException(_error_msg("{method} {url} failed: {e}"))
     click.echo(f"{resp.request.method} {resp.request.url}")
     for k, v in resp.request.headers.items():
         click.echo(f"{k.title()}: {v}")
@@ -82,17 +109,17 @@ def curl(
     if data:
         click.echo(data)
 
-    cprint("========== response ==========", "cyan")
-    cprint(
+    click.secho("========== response ==========", fg="cyan")
+    click.secho(
         f"{resp.status_code} {resp.reason_phrase}",
-        "red" if resp.status_code >= 400 else "green",
+        rg="red" if resp.status_code >= 400 else "green",
     )
     for k, v in resp.headers.items():
         click.echo(f"{k.title()}: {v}")
 
     click.echo("")
     click.echo(resp.content.decode() if resp.content else "")
-    cprint(f"(Elapsed: {resp.elapsed.total_seconds()}s)", "grey")
+    click.secho(f"(Elapsed: {resp.elapsed.total_seconds()}s)", rg="grey")
 
 
 @cli.group()
@@ -102,7 +129,7 @@ def map():
 
 @map.command()
 @click.option("--detail", is_flag=True, help="显示详情")
-@click.option("--ip", type=types.TYPE_IPV4, help="指定IP地址")
+@click.option("--ip", type=_types.TYPE_IPV4, help="指定IP地址")
 def info(detail=False, ip=None):
     """Get Local info"""
     local_info = {}
@@ -129,21 +156,35 @@ def info(detail=False, ip=None):
                     continue
                 click.echo(f"{k:15}: {v}")
     except IOError as e:
-        logger.error("get local info failed: {}", e)
-        return 1
+        raise click.ClickException(_error_msg(f"get local info failed: {e}"))
 
 
-@map.command()
+@map.command("weather")
 @click.option("--city", help="指定城市(省,市,县|区),例如:北京市,东城区")
 def query_weather(city: Optional[str] = None):
     """Get weather"""
     api = weather.HefengWeatherApi()
+
+    def _format_weather(weather: weather.Weather) -> str:
+        return WEATHER_TEMPLATE.format(
+            date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            area=click.style(weather.location.info(), fg="cyan"),
+            weather=click.style(weather.weather, fg="cyan"),
+            temperature=click.style(f"{weather.temperature}℃", fg="cyan"),
+            winddirection=click.style(weather.winddirection, fg="blue"),
+            windpower=click.style(weather.windpower or "-", fg="blue"),
+            windspeed=click.style(weather.windspeed or "-", fg="blue"),
+            humidity=click.style(weather.humidity or "-", fg="yellow"),
+            reporttime=click.style(f"更新时间: {weather.reporttime}", fg="magenta"),
+            link=click.style(f"更多信息: {weather.link or '-'}", fg="magenta"),
+        )
+
     if not city:
         qq_api = qqmap.QQMapAPI()
         logger.debug("get my location")
         my_location = qq_api.get_location()
         data = qq_api.get_weather(my_location)
-        print(data.format())
+        click.echo(_format_weather(data))
         return
 
     values = re.split(r",|，", city)
@@ -156,12 +197,12 @@ def query_weather(city: Optional[str] = None):
     logger.debug("lookup city {}", city)
     try:
         locations = api.lookup_city(location_name, adm=adm)
-    except (httpx.HttpError, httpx.RequestError) as e:
+    except httpx.HTTPError as e:
         logger.error("lookup city failed: {}", e)
         return 1
     my_location = locations[0]
     data = api.get_weather(my_location)
-    print(data.format())
+    click.echo(_format_weather(data))
 
 
 @cli.group()
@@ -171,13 +212,35 @@ def disk():
 
 @disk.command()
 @click.help_option("-h", "--help")
-@click.argument("vhd_path")
-def compress_vhd(vhd_path):
+@click.argument("path", type=click.STRING)
+def compress_vhd(path: str):
     """Compress vhd/vhdx disk"""
+    if not Path(path).exists():
+        raise click.ClickException(_error_msg(f"file {path} not found"))
     try:
-        compress_virtual_disk(vhd_path)
+        compress_virtual_disk(path)
     except subprocess.CalledProcessError as e:
-        logger.error("run diskpart failed: {}", e)
+        raise click.ClickException(_error_msg(f"run diskpart failed: {e}"))
+
+
+@cli.group()
+def file():
+    """File tools"""
+
+
+@file.command()
+@click.argument("dirs", nargs=-1)
+def move(dirs: List[str]):
+    """Move files
+
+    Usage: move <dir1> [dir2] ... <dst>
+
+    """
+    if len(dirs) < 2:
+        raise click.UsageError(_error_msg("至少需要指定源目录和目标目录"))
+
+    for src in dirs[:-1]:
+        move_files(Path(src), Path(dirs[-1]))
 
 
 if __name__ == "__main__":

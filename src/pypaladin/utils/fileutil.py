@@ -31,6 +31,7 @@ def create_text(
     file_path.write_text(content, encoding=encoding)
     return file_path
 
+
 def move_files(
     src: Path,
     dst: Path,

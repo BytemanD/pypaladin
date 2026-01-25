@@ -6,25 +6,28 @@ readme = "README.md"
 authors = [
     { name = "BytemanD", email = "byteman.d@outlook.com" }
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 dependencies = [
     "click>=8.3.1",
     "httpx>=0.28.1",
     "loguru>=0.7.3",
     "pillow>=12.1.0",
     "prettytable>=3.17.0",
-    "pydantic>=2.12.5",
-    "pydantic-settings>=2.12.0",
+    "pydantic==2.12.5",
+    "pydantic-settings==2.12.0",
     "pyjwt>=2.10.1",
     "pyyaml>=6.0.3",
     "pyzbar>=0.1.9",
     "sqlalchemy>=2.0.45",
-    "termcolor>=3.3.0",
 ]
 
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+# 命令行脚本入口
+[project.scripts]
+paladin-tool = "pypaladin_tool.main:cli"
+
+# [build-system]
+# requires = ["hatchling"]
+# build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
@@ -32,9 +35,15 @@ dev = [
     "ruff>=0.14.11",
 ]
 
+# [tool.hatch.build]
+# include = ["src/*"]
+
+[tool.uv]
+package = true
+
 [[tool.uv.index]]
-name = "tsinghua"
-url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+name = "tencent"
+url = "http://mirrors.cloud.tencent.com/pypi/simple"
 
 [tool.pytest]
 minversion = "9.0"

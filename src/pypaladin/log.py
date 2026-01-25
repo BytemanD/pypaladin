@@ -28,12 +28,12 @@ def _patcher(record: Dict, extra_keys: List[str] = []):
 
 def setup_logger(config: LogConfig):
     """Setup logging configuration."""
-    logger.remove()
     kwargs = {}
     if config.format:
         kwargs["format"] = config.format
     if config.colorize:
         kwargs["colorize"] = config.colorize
+    logger.remove()
     logger.add(
         config.file if config.file else sys.stdout,
         level=config.level.upper(),
@@ -43,3 +43,7 @@ def setup_logger(config: LogConfig):
         extra={"context": "-"},
         patcher=lambda record: _patcher(record, ["trace"] + config.custom_extra),  # type: ignore
     )
+
+
+def add_conole_handler(level: str):
+    logger.add(sys.stdout, level=level.upper())
