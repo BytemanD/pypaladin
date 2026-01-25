@@ -240,7 +240,10 @@ def move(dirs: List[str]):
         raise click.UsageError(_error_msg("至少需要指定源目录和目标目录"))
 
     for src in dirs[:-1]:
-        move_files(Path(src), Path(dirs[-1]))
+        try:
+            move_files(Path(src), Path(dirs[-1]), recursive=True, if_exists="ignore")
+        except (FileNotFoundError, FileExistsError, PermissionError) as e:
+            raise click.UsageError(_error_msg(f"执行失败, {e}"))
 
 
 if __name__ == "__main__":

@@ -44,8 +44,10 @@ def move_files(
         dst (Path): 目标路径
         recursive (bool, optional): 是否递归移动. Defaults to False.
     """
+    if dst.is_file():
+        raise FileExistsError(f"路径 {dst} 不是一个有效的目录")
     if not src.exists():
-        raise FileNotFoundError(f"源文件不存在: {src}")
+        raise FileNotFoundError(f"路径 {src} 不存在")
     if src.is_file():
         files = [src]
     elif recursive:
