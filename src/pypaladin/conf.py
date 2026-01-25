@@ -1,3 +1,4 @@
+from typing import Optional, Sequence
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from pypaladin import log
@@ -20,11 +21,11 @@ class BaseAppConfig(BaseSettings):
     log: LogConfig = LogConfig()
     db: objects.DBConfig = objects.DBConfig()
 
-    def __init__(self):
-        super().__init__()
+    @classmethod
+    def setup(cls, values: Optional[dict] = None):
+        c = cls.model_validate(values or {})
+        log.setup_logger(c.log)
+        objects.setup_db(c.db)
 
-    def setup(self):
-        log.setup_logger(self.log)
-
-        httpclient._DEFAULT_CONF = self.http_client
-        objects._DEFAULT_CONF = self.db
+        httpclient._DEFAULT_CONF = c.http_client
+        return c

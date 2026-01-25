@@ -1,5 +1,6 @@
 import dataclasses
 import re
+from typing import Dict
 
 import click
 
@@ -46,9 +47,11 @@ class AreaType(click.ParamType):
 class HeaderType(click.ParamType):
     name = "header"
 
-    def convert(self, value, param, ctx) -> dict:
-        values = value.split("=", 1)
+    def convert(self, value: str, param, ctx) -> Dict[str, str]:
+        values = value.split(":", 1)
         if len(values) < 2:
+            self.fail(f"{value} is not a valid header", param, ctx)
+        if not values[0].strip():
             self.fail(f"{value} is not a valid header", param, ctx)
         return {values[0].strip(): ":".join(values[1:]).strip()}
 

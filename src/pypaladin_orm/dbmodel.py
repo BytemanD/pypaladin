@@ -1,10 +1,17 @@
-from sqlalchemy import Column, Integer
-from sqlalchemy.orm import declarative_base
+from peewee import Model, AutoField, DatabaseProxy
 
-Base = declarative_base()
+db_proxy = DatabaseProxy()
+
+_tables = []
 
 
-class BaseDBModel(Base):
-    __abstract__ = True
+class BaseDBModel(Model):
+    id = AutoField()
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    class Meta:
+        database = db_proxy
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        if cls not in _tables:
+            _tables.append(cls)

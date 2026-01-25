@@ -4,7 +4,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import httpx
 
@@ -21,7 +21,8 @@ from pypaladin_map import ipinfo, location, qqmap, weather
 from pypaladin_tool import _types
 from pypaladin_tool._constants import WEATHER_TEMPLATE
 
-CONF = BaseAppConfig()
+
+CONF = BaseAppConfig.setup()
 
 
 def _error_msg(message: str):
@@ -33,14 +34,13 @@ def _error_msg(message: str):
 @click.option("-v", "--verbose", count=True, help="Verbose mode")
 def cli(verbose: int):
     """paladin tools"""
-    CONF.setup()
     if verbose:
         if not CONF.log.file:
             CONF.log.level = ["INFO", "DEBUG", "TRACE"][min(verbose, 3) - 1]
             logger.remove()
-            CONF.setup()
-        else:
-            log.add_conole_handler(["INFO", "DEBUG", "TRACE"][min(verbose, 3) - 1])
+        log.add_conole_handler(
+            ["INFO", "DEBUG", "TRACE"][min(verbose, 3) - 1], CONF.log
+        )
 
 
 def click_command_with_help(func):
@@ -66,42 +66,41 @@ def click_command_with_help(func):
 @click.option(
     "-H",
     "--header",
-    multiple=True,
     type=_types.TYPE_HEADER,
-    help="HTTP headers. e.g. 'content-type=application/json",
+    multiple=True,
+    help="HTTP headers. e.g. 'content-type: application/json",
 )
 @click.argument("url", type=click.STRING)
 def curl(
     url: str,
     method: str = "GET",
-    header: Optional[dict] = None,
+    header: List[Dict] = [],
     timeout: Optional[int] = None,
     data: Optional[str] = None,
 ):
     """curl command
 
     \b
-    Argument:
+    Args:
         URl: 请求URL
-    Example:
+    e.g.
         curl http://www.example.com
     """
     if not url.startswith("http://") and not url.startswith("https://"):
         raise click.UsageError(
             _error_msg(f'url "{url}" is invalid, do you mean http(s)://{url} ?')
         )
-    if timeout is not None and timeout <= 0:
-        raise click.UsageError(_error_msg(f'timeout "{timeout}" must > 0)'))
 
+    client = default_client(timeout=timeout)
     try:
-        client = default_client(timeout=timeout)
         resp = client.request(
             method=method,
             url=url,
-            headers=functools.reduce(lambda x, y: x | y, header or [], {}),
+            headers={k: v for h in header for k, v in h.items()},
+            content=data,
         )
-    except httpx.HTTPError:
-        raise click.ClickException(_error_msg("{method} {url} failed: {e}"))
+    except httpx.HTTPError as e:
+        raise click.ClickException(_error_msg(f"{method} {url} failed: {e}"))
     click.echo(f"{resp.request.method} {resp.request.url}")
     for k, v in resp.request.headers.items():
         click.echo(f"{k.title()}: {v}")
@@ -112,25 +111,25 @@ def curl(
     click.secho("========== response ==========", fg="cyan")
     click.secho(
         f"{resp.status_code} {resp.reason_phrase}",
-        rg="red" if resp.status_code >= 400 else "green",
+        fg="red" if resp.status_code >= 400 else "green",
     )
     for k, v in resp.headers.items():
         click.echo(f"{k.title()}: {v}")
 
     click.echo("")
     click.echo(resp.content.decode() if resp.content else "")
-    click.secho(f"(Elapsed: {resp.elapsed.total_seconds()}s)", rg="grey")
+    click.secho(f"(Elapsed: {resp.elapsed.total_seconds()}s)", fg="bright_black")
 
 
 @cli.group()
-def map():
-    """MAP tools"""
+def network():
+    """Network tools"""
 
 
-@map.command()
+@network.command("location")
 @click.option("--detail", is_flag=True, help="显示详情")
 @click.option("--ip", type=_types.TYPE_IPV4, help="指定IP地址")
-def info(detail=False, ip=None):
+def _location(detail=False, ip=None):
     """Get Local info"""
     local_info = {}
     if ip:
@@ -159,9 +158,9 @@ def info(detail=False, ip=None):
         raise click.ClickException(_error_msg(f"get local info failed: {e}"))
 
 
-@map.command("weather")
+@network.command("weather")
 @click.option("--city", help="指定城市(省,市,县|区),例如:北京市,东城区")
-def query_weather(city: Optional[str] = None):
+def _weather(city: Optional[str] = None):
     """Get weather"""
     api = weather.HefengWeatherApi()
 
@@ -175,8 +174,10 @@ def query_weather(city: Optional[str] = None):
             windpower=click.style(weather.windpower or "-", fg="blue"),
             windspeed=click.style(weather.windspeed or "-", fg="blue"),
             humidity=click.style(weather.humidity or "-", fg="yellow"),
-            reporttime=click.style(f"更新时间: {weather.reporttime}", fg="magenta"),
-            link=click.style(f"更多信息: {weather.link or '-'}", fg="magenta"),
+            reporttime=click.style(
+                f"更新时间: {weather.reporttime}", fg="bright_black"
+            ),
+            link=click.style(f"更多信息: {weather.link or '-'}", fg="bright_black"),
         )
 
     if not city:
@@ -212,15 +213,15 @@ def disk():
 
 @disk.command()
 @click.help_option("-h", "--help")
-@click.argument("path", type=click.STRING)
+@click.argument("path", type=click.Path(exists=True))
 def compress_vhd(path: str):
     """Compress vhd/vhdx disk"""
     if not Path(path).exists():
         raise click.ClickException(_error_msg(f"file {path} not found"))
     try:
-        compress_virtual_disk(path)
-    except subprocess.CalledProcessError as e:
-        raise click.ClickException(_error_msg(f"run diskpart failed: {e}"))
+        compress_virtual_disk(Path(path))
+    except (subprocess.CalledProcessError, OSError) as e:
+        raise click.ClickException(_error_msg(f"compress failed: {e}"))
 
 
 @cli.group()
@@ -229,19 +230,22 @@ def file():
 
 
 @file.command()
-@click.argument("dirs", nargs=-1)
-def move(dirs: List[str]):
+@click.argument("sources", nargs=-1, type=click.Path(exists=True))
+@click.argument("dest", type=click.Path())
+def move(sources: List[Path], dest: Path):
     """Move files
 
-    Usage: move <dir1> [dir2] ... <dst>
-
+    \b
+    e.g.
+        move dir/path/1 /target/path
+        move dir/path/1 dir/path/2 /target/path
     """
-    if len(dirs) < 2:
-        raise click.UsageError(_error_msg("至少需要指定源目录和目标目录"))
+    if not sources:
+        raise click.UsageError(_error_msg("至少需要指定1个源目录"))
 
-    for src in dirs[:-1]:
+    for src in sources:
         try:
-            move_files(Path(src), Path(dirs[-1]), recursive=True, if_exists="ignore")
+            move_files(Path(src), Path(dest), recursive=True, if_exists="ignore")
         except (FileNotFoundError, FileExistsError, PermissionError) as e:
             raise click.UsageError(_error_msg(f"执行失败, {e}"))
 

@@ -1,12 +1,15 @@
 import os
+from pathlib import Path
 import subprocess
 import sys
 import tempfile
 
 from loguru import logger
 
+from pypaladin.utils.fileutil import file_size
 
-def compress_virtual_disk(vhd_path: str):
+
+def compress_virtual_disk(vhd_path: Path):
     """
     使用diskpart压缩虚拟磁盘(VHD/VHDX)
 
@@ -14,11 +17,11 @@ def compress_virtual_disk(vhd_path: str):
         vhd_path (str): 虚拟磁盘文件的完整路径
     """
     # 检查文件是否存在
-    if not os.path.exists(vhd_path):
+    if not vhd_path.exists():
         raise FileNotFoundError(f"虚拟磁盘文件不存在: {vhd_path}")
 
     # 检查文件扩展名
-    if not vhd_path.lower().endswith((".vhd", ".vhdx")):
+    if not vhd_path.name.endswith((".vhd", ".vhdx")):
         raise ValueError("文件必须是VHD或VHDX格式")
 
     # 创建diskpart脚本内容
@@ -44,6 +47,7 @@ def compress_virtual_disk(vhd_path: str):
 
     logger.info("开始压缩虚拟磁盘")
 
+    logger.info("当前虚拟磁盘大小: {}", file_size(vhd_path))
     try:
         # 执行diskpart命令
         subprocess.run(
@@ -58,3 +62,4 @@ def compress_virtual_disk(vhd_path: str):
         # 删除临时脚本文件
         if os.path.exists(temp_script_path):
             os.remove(temp_script_path)
+    logger.info("虚拟磁盘大小: {}", file_size(vhd_path, natural=True))

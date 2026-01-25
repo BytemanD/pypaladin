@@ -2,8 +2,9 @@ from enum import Enum
 import os
 from pathlib import Path
 import shutil
-from typing import Optional, Union
+from typing import Literal, Optional, Union, overload
 
+import humanize
 from loguru import logger
 
 
@@ -70,3 +71,33 @@ def move_files(
                 raise ValueError(f"未知的 if_exists 值: {if_exists}")
         logger.debug("移动文件: {} -> {}", file, dst)
         shutil.move(file, dst)
+
+
+@overload
+def file_size(path: Union[Path, str], natural: Literal[False] = False) -> int:
+    """处理整数"""
+    ...
+
+
+@overload
+def file_size(path: Union[Path, str], natural: Literal[True]) -> str:
+    """处理字符串"""
+    ...
+
+
+def file_size(path: Union[Path, str], natural=False) -> Union[int, str]:
+    """获取文件大小，单位字节
+
+    Args:
+        path (Union[Path, str]): 文件路径
+
+    Returns:
+        int: 文件大小，单位字节
+    """
+    file_path = Path(path)
+    if not file_path.exists() or not file_path.is_file():
+        raise FileNotFoundError(f"文件不存在: {file_path}")
+    if natural:
+        return humanize.naturalsize(file_path.stat().st_size)
+    else:
+        return file_path.stat().st_size

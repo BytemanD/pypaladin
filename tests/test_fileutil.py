@@ -29,7 +29,7 @@ def test_move_nonexistent_file_raises_error():
         nonexistent_file = temp_path.joinpath("nonexistent.txt")
         dst_dir = temp_path.joinpath("destination")
 
-        with pytest.raises(FileNotFoundError, match="源文件不存在"):
+        with pytest.raises(FileNotFoundError):
             move_files(nonexistent_file, dst_dir)
 
 

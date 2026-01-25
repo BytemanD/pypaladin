@@ -45,5 +45,10 @@ def setup_logger(config: LogConfig):
     )
 
 
-def add_conole_handler(level: str):
-    logger.add(sys.stdout, level=level.upper())
+def add_conole_handler(level: str, config: LogConfig):
+    kwargs = {}
+    if config.format:
+        kwargs["format"] = config.format
+    if config.colorize:
+        kwargs["colorize"] = config.colorize
+    logger.add(sys.stdout, level=level.upper(), **kwargs)
