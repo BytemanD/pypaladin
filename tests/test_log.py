@@ -2,7 +2,7 @@ from loguru import logger
 from concurrent import futures
 
 from pypaladin import context
-import fixture
+
 
 def test_logger():
     def do_something(x):
@@ -17,4 +17,3 @@ def test_logger():
         for _ in executor.map(do_something, ["task1", "task2"]):
             pass
     logger.info("done")
-

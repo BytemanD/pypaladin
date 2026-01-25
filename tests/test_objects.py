@@ -4,7 +4,6 @@ from sqlalchemy import Column, String
 from pypaladin_orm.objects import BaseObject, create_all
 from pypaladin_orm.dbmodel import BaseDBModel
 
-import fixture
 
 class UserDB(BaseDBModel):
     __tablename__ = "users"

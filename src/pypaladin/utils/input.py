@@ -3,7 +3,7 @@ from typing import Callable, Dict, List, Optional
 import prettytable
 from termcolor import colored, cprint
 
-from pytoys.common import table
+from pypaladin import table
 
 FuncPrefender = Callable[[prettytable.PrettyTable], None]
 
