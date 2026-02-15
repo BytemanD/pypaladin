@@ -16,7 +16,7 @@ from pypaladin.command.diskpart import compress_virtual_disk
 from pypaladin.conf import BaseAppConfig
 from pypaladin.httpclient import default_client
 from pypaladin.utils import strutil
-from pypaladin.utils.fileutil import move_files
+from pypaladin.utils.fileutil import IfExists, move_files
 from pypaladin_map import ipinfo, location, qqmap, weather
 from pypaladin_tool import _types
 from pypaladin_tool._constants import WEATHER_TEMPLATE
@@ -134,7 +134,7 @@ def _location(detail=False, ip=None):
     local_info = {}
     if ip:
         is_ip, ip_type = strutil.is_valid_ip(ip)
-        if not is_ip or ip_type != strutil.V4:
+        if not is_ip or ip_type != strutil.IPVersion.V4:
             logger.error("invalid ipv4 address")
             return 1
         local_info["ip"] = ip
@@ -230,9 +230,10 @@ def file():
 
 
 @file.command()
+@click.option("--dry-run", is_flag=True, help="显示将要执行的操作，但不实际移动文件")
 @click.argument("sources", nargs=-1, type=click.Path(exists=True))
 @click.argument("dest", type=click.Path())
-def move(sources: List[Path], dest: Path):
+def move(sources: List[Path], dest: Path, dry_run: bool = False):
     """Move files
 
     \b
@@ -243,11 +244,17 @@ def move(sources: List[Path], dest: Path):
     if not sources:
         raise click.UsageError(_error_msg("至少需要指定1个源目录"))
 
+    files_to_move = []
     for src in sources:
         try:
-            move_files(Path(src), Path(dest), recursive=True, if_exists="ignore")
+            move_files(Path(src), Path(dest), recursive=True, if_exists=IfExists.ignore,
+                       dry_run=dry_run)
         except (FileNotFoundError, FileExistsError, PermissionError) as e:
             raise click.UsageError(_error_msg(f"执行失败, {e}"))
+
+    if files_to_move:
+        for src, dst in files_to_move:
+            click.secho(f"move {src} -> {dst}", fg='cyan')
 
 
 if __name__ == "__main__":

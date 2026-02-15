@@ -23,7 +23,7 @@ class IPv4Type(click.ParamType):
     def convert(self, value, param, ctx) -> str:
         if isinstance(value, str):
             is_ip, ip_type = strutil.is_valid_ip(value)
-            if is_ip and ip_type == "v4":
+            if is_ip and ip_type == strutil.IPVersion.V4:
                 return value
 
         self.fail(f"{value} is not a valid ipv4 address", param, ctx)

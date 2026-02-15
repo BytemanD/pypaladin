@@ -1,4 +1,4 @@
-from typing import Any, Literal, Mapping, Optional, Sequence, Set, Type
+from typing import Any, Literal, Mapping, Optional, Set
 
 from loguru import logger
 from peewee import ModelSelect, SqliteDatabase, MySQLDatabase, PostgresqlDatabase

@@ -3,7 +3,7 @@ import tempfile
 
 import pytest
 
-from pypaladin.utils.fileutil import create_text, move_files
+from pypaladin.utils.fileutil import IfExists, create_text, move_files
 
 
 def test_move_single_file():
@@ -20,6 +20,22 @@ def test_move_single_file():
         # 验证文件已移动
         assert not file1_path.exists()
         assert dst_dir.joinpath(file1).exists()
+
+
+def test_move_single_file_with_dry_run():
+    """测试移动单个文件"""
+    file1 = "file1.txt"
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+        dst_dir = temp_path.joinpath("destination")
+        # 创建源文件
+        file1_path = create_text(temp_path, Path("source", file1))
+        # 移动文件
+        move_files(file1_path.parent, dst_dir, dry_run=True)
+
+        # 验证文件已移动
+        assert file1_path.exists()
+        assert not dst_dir.joinpath(file1).exists()
 
 
 def test_move_nonexistent_file_raises_error():
@@ -122,7 +138,7 @@ def test_move_files_with_ignore():
         dst_file1_path = create_text(temp_dir, dst_dir.joinpath(file1), content="bar")
 
         # 移动文件
-        move_files(file1_path.parent, dst_dir, if_exists="ignore")
+        move_files(file1_path.parent, dst_dir, if_exists='ignore')
 
         # 验证文件已移动
         assert file1_path.exists()

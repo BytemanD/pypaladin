@@ -28,9 +28,16 @@ paladin-tool = "pypaladin_tool.main:cli"
 # build-backend = "hatchling.build"
 
 [dependency-groups]
-dev = ["pytest>=9.0.2", "ruff>=0.14.11"]
+dev = [
+    "pip>=26.0.1",
+    "pytest>=9.0.2",
+    "ruff>=0.14.11",
+]
 orm = [
     "peewee>=3.19.0",
+]
+qrcode = [
+    "qrcode>=8.2",
 ]
 # [tool.hatch.build]
 # include = ["src/*"]

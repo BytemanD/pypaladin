@@ -1,5 +1,3 @@
-"""腾讯位置服务 api"""
-
 import hashlib
 from typing import Optional
 from urllib import parse

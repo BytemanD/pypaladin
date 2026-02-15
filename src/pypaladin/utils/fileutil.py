@@ -1,14 +1,15 @@
-from enum import Enum
+from enum import StrEnum
+from enum import StrEnum
 import os
 from pathlib import Path
 import shutil
-from typing import Literal, Optional, Union, overload
+from typing import List, Literal, Optional, Tuple, Union, overload
 
 import humanize
 from loguru import logger
 
 
-class IfExists(str, Enum):
+class IfExists(StrEnum):
     """文件存在时处理方式"""
 
     overwrite = "overwrite"
@@ -32,10 +33,31 @@ def create_text(
     file_path.write_text(content, encoding=encoding)
     return file_path
 
+@overload
+def move_files(
+    src: Path,
+    dst: Path,
+    dry_run: Literal[False],
+    recursive: bool = False,
+    if_exists: Union[IfExists, str] = IfExists.raise_error,
+) -> None:
+    ...
+
+@overload
+def move_files(
+    src: Path,
+    dst: Path,
+    dry_run: Literal[True],
+    recursive: bool = False,
+    if_exists: Union[IfExists, str] = IfExists.raise_error,
+) -> List[Tuple[Path, Path]]:
+    ...
+
 
 def move_files(
     src: Path,
     dst: Path,
+    dry_run: bool = False,
     recursive: bool = False,
     if_exists: Union[IfExists, str] = IfExists.raise_error,
 ):
@@ -57,19 +79,23 @@ def move_files(
         files = [x for x in src.glob("*") if x.is_file()]
 
     dst.mkdir(parents=True, exist_ok=True)
+    files_to_move: List[Tuple[Path, Path]] = []
     for file in files:
         if dst.joinpath(file.name).exists():
             if if_exists == IfExists.raise_error:
                 raise FileExistsError(f"目标文件已存在: {dst}")
-            elif if_exists == IfExists.overwrite:
-                logger.warning("删除文件: {}", dst.joinpath(file.name))
-                os.remove(dst.joinpath(file.name))
-            elif if_exists == IfExists.ignore:
-                logger.warning("跳过文件: {}", file)
+            if if_exists == IfExists.ignore:
+                logger.warning("file '{}' exists", file)
                 continue
-            else:
-                raise ValueError(f"未知的 if_exists 值: {if_exists}")
-        logger.debug("移动文件: {} -> {}", file, dst)
+        files_to_move.append((file, dst.joinpath(file.name)))
+
+    if dry_run:
+        return files_to_move
+    for file, dst_file in files_to_move:
+        if dst_file.exists():
+            if if_exists == IfExists.overwrite:
+                logger.warning("删除文件: {}", dst_file)
+                os.remove(dst.joinpath(file.name))
         shutil.move(file, dst)
 
 
